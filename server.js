@@ -45,31 +45,43 @@ app.post('/users/signup', async (req, res) => { // 1
 })
 
 app.get('/postings', async(req, res) => {
-  const postings = await prisma.$queryRaw`
-    SELECT
-      postings.id,
-      postings.contents, 
-      users.nickname
-    FROM users 
-    JOIN postings ON postings.user_id = users.id;
-  `
+  try {
 
-  // 1. for loop
-  for (let i = 0; i < postings.length; i++) {
-    const posting = postings[i]
-    posting.username = posting.nickname
-    delete posting.nickname
+    const postings = await prisma.$queryRaw`
+      SELECT
+        postings.id,
+        postings.contents, 
+        users.nickname
+      FROM users 
+      JOIN postings ON postings.user_id = users.id;
+    `
+
+    // 1. for loop
+    for (let i = 0; i < postings.length; i++) {
+      const posting = postings[i]
+      posting.username = posting.nickname
+      delete posting.nickname
+    }
+
+    // 2. map
+    postings.map((posting) => {
+      posting.username = posting.nickname
+      delete posting.nickname
+    })
+
+    // 3. spread 연산자 ...
+
+    if (postings.length === 0) {
+      const error = new Error('DATA_NOT_FOUND')
+      error.statusCode = 404
+      throw error
+    }
+
+    return res.status(200).json({data: postings})
+  } catch (err) {
+    console.log(err)
+    return res.status(err.statusCode || 500).json({ message: err.message }) // 6
   }
-
-  // 2. map
-  postings.map((posting) => {
-    posting.username = posting.nickname
-    delete posting.nickname
-  })
-
-  // 3. spread 연산자 ...
-
-  return res.status(200).json({data: postings})
 })
 
 app.get('/postings/:id', async (req, res) => {
